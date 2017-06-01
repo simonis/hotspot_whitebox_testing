@@ -1,0 +1,606 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta charset="utf-8" />
+
+    <title>The HotSpot Whitebox-Testing API</title>
+
+    <meta name="description" content="A small tutorial about the the HotSpot Whitebox-Testing API" />
+    <meta name="author" content="Volker H. Simonis" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" />
+
+    <link rel="stylesheet" href="reveal.js/css/reveal.css" />
+    <link rel="stylesheet" href="reveal.js/css/theme/jet2015.css" id="theme" />
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="reveal.js/lib/css/monokai_sublime.css" />
+
+  <style type="text/css">
+.scrollable {
+    bottom: 0px;
+    overflow-y: auto  !important;
+    overflow-x: hidden !important;
+}
+
+.reveal .big {
+    font-size: .8em;
+    line-height: 1.3em;
+}
+
+.reveal pre.console {
+    background-color: black;
+    color: #00ff00;
+}
+
+.reveal pre.noshadow {
+    border-radius: 0;
+    box-shadow: unset;
+}
+
+.reveal pre code {
+    max-height: 98%;
+}
+  </style>
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="reveal.js/lib/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!--
+      Issue #1105: Keyboard shortcut to skip forward/back over fragments #1173
+      https://github.com/hakimel/reveal.js/pull/1173
+    -->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+
+        <section>
+          <h1>The HotSpot<br/> Whitebox-Testing API</h1>
+          <p>
+            <small>Volker Simonis, SAP / <a href="mailto:volker.simonis@gmail.com">volker.simonis@gmail.com</a></small>
+          </p>
+        </section>
+
+
+        <section>
+
+          <h2>CPU Information</h2>
+
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+sun.hotspot.WhiteBox WB = WhiteBox.getWhiteBox();
+...
+System.out.println(WB.getCPUFeatures());
+
+System.out.println(sun.hotspot.cpu.CPUInfo.getFeatures());
+
+System.out.println(CPUInfo.getAdditionalCPUInfo());
+
+System.out.println("SSE3 : " + CPUInfo.hasFeature("sse3"));
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+
+          <h2>CPU Information</h2>
+
+          <pre class="big console" data-trim="true">
+<![CDATA[
+(4 cores per cpu, 1 threads per core) \
+family 6 model 69 stepping 1,\
+cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, tsc
+
+[cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, tsc]
+
+(4 cores per cpu, 1 threads per core) \
+family 6 model 69 stepping 1
+
+CPU supports sse3 : true
+]]>
+          </pre>
+        </section>
+
+
+        <section>
+
+          <h2>Stack Information</h2>
+
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+public static void frameSize(long caller) {
+    long me = WB.getThreadRemainingStackSize();
+    System.out.println("Frame size   = " + (caller - me));
+}
+...
+System.out.println("Stack size=" + WB.getThreadStackSize());
+
+System.out.println("Stack free=" + 
+                   WB.getThreadRemainingStackSize());
+
+frameSize(WB.getThreadRemainingStackSize());
+]]>
+            </code>
+          </pre>
+          <br/>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+Stack size   = 1052672
+Stack free   = 939680
+Frame size   = 128
+]]>
+          </pre>
+        </section>
+
+
+        <section>
+
+          <h2>Memory Information</h2>
+
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+WB.printHeapSizes();
+
+System.out.println("Oop size = " + WB.getHeapOopSize());
+System.out.println("Max compressed oops heap size = " +
+                   WB.getCompressedOopsMaxHeapSize());
+System.out.println("OS page size = " +  WB.getVMPageSize());
+]]>
+            </code>
+          </pre>
+          <br/>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+Minimum heap 8388608 Initial heap 98566144 \
+Maximum heap 1566572544 \
+Space alignment 1048576 Heap alignment 2097152            
+
+Oop size = 8
+Max compressed oops heap size = 34326183936
+OS page size = 4096
+]]>
+          </pre>
+        </section>
+
+
+        <section>
+
+          <h2>Memory Information</h2>
+
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+boolean cprOops = WB.getBooleanVMFlag("UseCompressedOops");
+System.out.println("Using compressed oops = " + cprOops);
+
+String hi = "Hello FOSDEM!";
+
+System.out.println("&hello    =" +  WB.getObjectAddress(hi));
+System.out.println("sizeof(String)=" + WB.getObjectSize(hi));
+
+// Get the strings backing array (a byte[] since JEP 254)
+byte[] b = (byte[])UNSAFE.getObject(hi, cprOops ? 12 : 16);
+System.out.println("sizeof(\"hello\")=" +
+             (WB.getObjectSize(hi) + WB.getObjectSize(b)));
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+
+          <h2>Memory Information</h2>
+
+          <div style="width: 100%">
+            <div style="float: left; width: 55%">
+
+              <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:-UseCompressedOops
+-XX:-CompactStrings
+
+&hello         =0x7fb7ded2f980
+sizeof(String) =32
+sizeof("hello")=88
+]]>
+              </pre>
+              <br/>
+              <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:-UseCompressedOops
+-XX:+CompactStrings
+
+&hello         =0x7f00d2d0ac48
+sizeof(String) =32
+sizeof("hello")=72
+]]>
+              </pre>
+            </div>
+            <div style="position:relative; float: right; width: 45%">
+
+              <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:+UseCompressedOops
+-XX:-CompactStrings
+
+&hello         =0x8aeb1f50
+sizeof(String) =24
+sizeof("hello")=72
+]]>
+              </pre>
+              <br/>
+              <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:+UseCompressedOops
+-XX:+CompactStrings
+
+&hello         =0x8ae8dbb0
+sizeof(String) =24
+sizeof("hello")=56
+]]>
+              </pre>
+            </div>
+          </div>
+        </section>
+
+
+        <section>
+          <h2>Compiler Control</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+Method m = WBTest.class.getMethod("foo");
+for (int i = 0; i < 50000; i++) {
+  sum += foo();
+  if (!enqued && WB.isMethodQueuedForCompilation(m)) {
+    System.out.println(m + " enqued in iteration " + i);
+    enqued = true;
+  }
+  if (WB.isMethodCompiled(m)) {
+    if (WB.getMethodCompilationLevel(m) != level) {
+      level = WB.getMethodCompilationLevel(m);
+      System.out.println(m + " compiled at level " + level +
+                             " in iteration " + i);
+      enqued = false;
+    }
+  }
+}
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Compiler Control</h2>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:+BackgroundCompilation
+
+int WBTest.foo() enqued for compilation in iteration 1151
+int WBTest.foo() compiled at level 2 in iteration 9599
+int WBTest.foo() enqued for compilation in iteration 11135
+int WBTest.foo() compiled at level 4 in iteration 12263
+]]>
+          </pre>
+          <br/>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+-XX:-BackgroundCompilation (-Xbatch)
+
+int WBTest.foo() compiled at level 3 in iteration 255     
+int WBTest.foo() compiled at level 4 in iteration 5375
+]]>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Compiler Control</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+WB.deoptimizeMethod(m);
+WB.enqueueMethodForCompilation(m, 4);
+while (!WB.isMethodCompiled(m)) Thread.sleep(100);
+
+NMethod nm = sun.hotspot.code.NMethod.get(m, false);
+System.out.println(nm);
+
+File tmp = File.createTempFile("assembly", null);
+Files.write(Paths.get(tmp.getAbsolutePath()), nm.insts);
+
+pb = new ProcessBuilder("objdump", , tmp.getAbsolutePath());
+Process p = pb.start();
+br = new BufferedReader(
+       new InputStreamReader(p.getInputStream()));
+while (br.ready()) System.out.println(br.readLine());
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Compiler Control</h2>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+NMethod{
+  CodeBlob{name=nmethod, size=968,
+           code_blob_type=MethodNonProfiled,
+           address=140193448285712},
+  insts=[B@7a46a697, comp_level=4, compile_id=119,
+  entry_point=140193448286080}
+
+00:	89 84 24 00 a0 fe ff 	mov    %eax,-0x16000(%rsp)
+07:	55                   	push   %rbp
+08:	48 83 ec 20          	sub    $0x20,%rsp
+0c:	49 ba 70 d3 62 a8 00 	movabs $0xa862d370,%r10
+16:	45 8b 52 18          	mov    0x18(%r10),%r10d
+1a:	49 8b 42 10          	mov    0x10(%r10),%rax
+1e:	49 bb ff ff ff ff ff 	movabs $0xffffffffffff,%r11
+28:	49 b8 6d e6 ec de 05 	movabs $0x5deece66d,%r8
+...
+]]>
+<!--
+32:	4c 8b c8             	mov    %rax,%r9
+35:	4d 0f af c8          	imul   %r8,%r9
+-->
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Runtime</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+public boolean isClassAlive(String name);
+
+public boolean isMonitorInflated(Object obj);
+
+public void    forceSafepoint();
+
+public void addToBootstrapClassLoaderSearch(String segment);
+public void addToSystemClassLoaderSearch(String segment);
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>GC</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+public void    youngGC();
+
+public void    fullGC();
+
+public boolean g1StartConcMarkCycle();
+public boolean g1InConcurrentMark();
+public long    g1NumMaxRegions();
+public long    g1NumFreeRegions();
+public int     g1RegionSize();
+
+public boolean isInStringTable(String str);
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>VM Flags</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+public boolean isConstantVMFlag(String name);
+public boolean isLockedVMFlag(String name);
+
+public void    setBooleanVMFlag(String name, boolean value);
+public void    setIntVMFlag(String name, long value);
+...
+public Boolean getBooleanVMFlag(String name);
+public Long    getIntVMFlag(String name);
+...
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Building the WhiteBox API (JDK8)</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="bash" data-trim="true">
+<![CDATA[
+hg clone http://hg.openjdk.java.net/jdk8u/jdk8u-dev/hotspot
+
+cd hotspot/test/testlibrary/whitebox
+
+make BOOTDIR=<path_to_jdk>
+
+ls -la wb.jar
+-rw-r--r-- sim 8178 Jan 10 12:12 wb.jar
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Building the WhiteBox API (JDK9)</h2>
+          <pre class="big noshadow" data-trim="true">
+            <code class="bash" data-trim="true">
+<![CDATA[
+hg clone http://hg.openjdk.java.net/jdk9/dev jdk9-dev
+cd jdk9-dev && bash get_source.sh
+
+mkdir output && cd output
+bash <jdk9_src_root>/configure
+make build-test-lib
+
+ls -la support/test/lib/wb.jar
+-rw-r--r-- sim 52611 Jan 14 17:42 support/test/lib/wb.jar
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Using the WhiteBox API - standalone</h2>
+          <pre class="big console" data-trim="true">
+<![CDATA[
+java -Xbootclasspath/a:wb.jar
+     -XX:+UnlockDiagnosticVMOptions
+     -XX:+WhiteBoxAPI <Program_using_WhiteBox>
+]]>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>Using the WhiteBox API - <code>JTREG</code></h2>
+          <pre class="big console" data-trim="true">
+            <code class="java" data-trim="true">
+<![CDATA[
+/*
+ * @test WBApi
+ * @summary verify that whitebox functions can be executed
+ * @library /testlibrary /test/lib
+ * @build WBApi
+ * @run main ClassFileInstaller 
+ *                 sun.hotspot.WhiteBox
+ *                 sun.hotspot.WhiteBox$WhiteBoxPermission
+ * @run main/othervm -Xbootclasspath/a:.
+ *                   -XX:+UnlockDiagnosticVMOptions 
+ *                   -XX:+WhiteBoxAPI WBApi
+ */
+
+import sun.hotspot.WhiteBox;
+public class WBApi {
+...
+]]>
+            </code>
+          </pre>
+        </section>
+
+
+        <section>
+          <h2>The WhiteBox API - Implementation</h2>
+
+          <ul>
+            <li>
+              Implemented in:<br/>
+              <code><a href="http://hg.openjdk.java.net/jdk9/dev/hotspot/file/tip/src/share/vm/prims/whitebox.cpp">
+              hotspot/src/share/vm/prims/whitebox.cpp</a></code>.
+            </li>
+
+            <li>
+              <code>WhiteBox.registerNatives()</code> handled implicitly by:<br/>
+              <pre class="big noshadow" data-trim="true">
+                <code class="java" data-trim="true">
+<![CDATA[
+NativeLookup::lookup_entry()
+ -> NativeLookup::lookup_style()
+    -> lookup_special_native()
+]]>
+                </code>
+              </pre>
+              <br/>
+              and bound to <code>JVM_RegisterWhiteBoxMethods()</code>.
+            </li>
+
+            <li>
+              <code>WhiteBox::register_methods()</code> binds the native methods:<br/>
+              <pre class="big noshadow" data-trim="true">
+                <code class="java" data-trim="true">
+<![CDATA[
+{ ...                                                },
+{ "getHeapOopSize", "()I", (void*)&WB_GetHeapOopSize },
+{ "getVMPageSize",  "()I", (void*)&WB_GetVMPageSize  },
+]]>
+                </code>
+              </pre>
+            </li>
+          </ul>
+        </section>
+
+
+        <section>
+          <h2>OpenJDK Wiki</h2>
+          <p style="font-size:1.3em">
+          <a href="https://wiki.openjdk.java.net/display/HotSpot/The+WhiteBox+testing+API">
+            https://wiki.openjdk.java.net/display/HotSpot/The+WhiteBox+testing+API
+          </a>
+          </p>
+        </section>
+
+      </div>
+
+    </div>
+
+    <script src="reveal.js/lib/js/head.min.js"></script>
+    <script src="reveal.js/js/reveal.js"></script>
+
+    <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        width: 1024,
+        height: 768,
+        //width: 1280,
+        //height: 720,
+        margin: 0.1,
+        controls: false,
+        progress: true,
+        history: true,
+        center: true,
+
+        transition: 'none', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
